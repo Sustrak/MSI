@@ -9,7 +9,7 @@ module cache #(
     // BusRdX  - 01
     // BusUpgr - 10
     // Flush   - 11
-    input [1:0] bus_mgs_i,
+    input [1:0] bus_msg_i,
 
     // Processor requests
     output pr_rd_o,
