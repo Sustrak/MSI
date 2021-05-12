@@ -10,12 +10,15 @@ module cache #(
     // BusRdX  - 01
     // BusUpgr - 10
     // Flush   - 11
-    input [1:0] bus_msg_i,
+    input  [2:0] bus_msg_i,
+    output [2:0] bus_msg_o,
+    input  flush_i,
+    output flush_o,
     input [NUM_LINES-1:0] addr_i,
 
     // Processor requests
-    output pr_rd_o,
-    output pr_wr_o,
+    output pr_bus_req_o,
+    input  pr_bus_req_i,
     output [NUM_LINES-1:0] addr_o,
 
     // Processor Data
@@ -29,10 +32,11 @@ module cache #(
 );
 
 // Bus messages
-localparam BUS_RD    = 0;
-localparam BUS_RDX   = 1
-localparam BUS_UPGR  = 2;
-localparam BUS_FLUSH = 3;
+localparam BUS_IDLE  = 0;
+localparam BUS_RD    = 1;
+localparam BUS_RDX   = 2;
+localparam BUS_UPGR  = 3;
+localparam BUS_FLUSH = 4;
 
 localparam NUM_STATES = 6;
 localparam STATES_WIDTH = 3;
@@ -60,6 +64,7 @@ always(@posedge clk_i) begin
     end
 end
 
+// Next state of the cache
 always@(*) begin
     if (!rst_i) begin
         for (integer i = 0; i < NUM_LINES; i++) begin
@@ -87,6 +92,35 @@ always@(*) begin
                 if (data_valid_i && addr_i == i) nxt_line_state[i] = MODIFIED;
                 else nxt_line_state[i] = INV2MOD;
             end
+        end
+    end
+end
+
+// Bus messages
+always@(*) begin
+    if (!rst_i) begin
+        if (line_state[test_addr_i] == INVALID) begin
+            if (test_rd_i && bus_granted_i) bus_msg_o = BUS_RD;
+            else if (test_wr_i && bus_granted_i) bus_msg_o = BUS_RDX;
+            else bus_msg_o = BUS_IDLE;
+        end
+        else if (line_state[test_addr_i] == SHARED) begin
+            if (test_wr_i && bus_granted_i) bus_msg_o = BUS_UPGR;
+            else bus_msg_o = BUS_IDLE;
+        end
+        else bus_msg_o = BUS_IDLE;
+    end
+end
+
+// Flush
+always@(*) begin
+    if (!rst_i) begin
+        if (bus_msg_i == BUS_RD  && line_state[addr_i] == MODIFIED || 
+            bus_msg_i == BUS_RDX && line_state[addr_i] == MODIFIED    ) begin
+            flush_o = 1'b1;
+        end
+        else begin
+            flush_o = 0;
         end
     end
 end
