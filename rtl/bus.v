@@ -20,8 +20,6 @@ reg [1:0] proc_bus_owner;
 wire nxt_bus_state;
 wire [1:0]nxt_proc_bus_owner;
 
-//wire [NUM_PROCS-1:0] pr_rd_req; 
-//wire [NUM_PROCS-1:0] pr_wr_req;
 wire [NUM_PROCS-1:0] pr_bus_req_i;
 wire [NUM_PROCS-1:0] pr_bus_req_o;
 wire [NUM_PROCS-1:0][1:0] pr_bus_msg_i;
@@ -90,18 +88,30 @@ always @(*) begin
             2'b00 : begin
                 flush_o <= flush_i[0];
                 data_flush_fake_o <= data_flush_fake_i[0];
+                assert(flush_i[1] == 0); //Nomes 1 processador pot fer flush
+                assert(flush_i[2] == 0);
+                assert(flush_i[3] == 0);
             end
             2'b01 : begin
                 flush_o <= flush_i[1];
                 data_flush_fake_o <= data_flush_fake_i[1];
+                assert(flush_i[0] == 0); //Nomes 1 processador pot fer flush
+                assert(flush_i[2] == 0);
+                assert(flush_i[3] == 0);
             end
             2'b10 : begin
                 flush_o <= flush_i[2];
                 data_flush_fake_o <= data_flush_fake_i[2];
+                assert(flush_i[0] == 0); //Nomes 1 processador pot fer flush
+                assert(flush_i[1] == 0);
+                assert(flush_i[3] == 0);
             end
             2'b11 : begin
                 flush_o <= flush_i[3];
                 data_flush_fake_o <= data_flush_fake_i[3];
+                assert(flush_i[0] == 0); //Nomes 1 processador pot fer flush
+                assert(flush_i[1] == 0);
+                assert(flush_i[2] == 0);
             end
             default : ; 
         endcase
@@ -194,6 +204,8 @@ always @(*) begin
         pr_bus_req_o <= 0;
         nxt_proc_bus_owner <= 0;
     end
+    assert( (pr_bus_req_o[0] + pr_bus_req_o[1] + pr_bus_req_o[2] + pr_bus_req_o[3])
+             <= 1); //Nomes un proc guanya acces al bus
 end
 
 //Comptador per assignar prioritats rotatives en el bus. S'incrementa a cada cicle.
