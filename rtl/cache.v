@@ -22,7 +22,7 @@ module cache #(
     // Stimulus
     input test_rd_i,
     input test_wr_i,
-    input [NUM_LINES-1] test_addr_i
+    input [NUM_LINES-1:0] test_addr_i
 );
 
 // Bus messages
@@ -47,24 +47,31 @@ localparam WRITE = 2;
 localparam OP_WIDTH = 2;
 reg [OP_WIDTH-1:0] op;
 reg [NUM_LINES-1:0] op_addr;
+reg pr_bus_req_q;
 
-always(@posedge clk_i) begin
+always @(posedge clk_i) begin
     if (!rst_i) begin
-        for (integer i = 0; i < NUM_LINES; i++) begin
-            line_state[i] <= '0;
+	integer i;
+        for (i = 0; i < NUM_LINES; i++) begin
+            line_state[i] <= INVALID;
         end
     end
     else begin
-        for (integer i = 0; i < NUM_LINES; i++) begin
+	integer i;
+        for (i = 0; i < NUM_LINES; i++) begin
             line_state[i] <= nxt_line_state[i];
         end
     end
 end
 
 // Next state of the cache
+genvar i;
+generate
+for (i = 0; i < NUM_LINES; i++) begin
 always@(*) begin
     if (!rst_i) begin
-        for (integer i = 0; i < NUM_LINES; i++) begin
+        nxt_line_state[i] = INVALID;
+    end else begin
             if (line_state[i] == INVALID) begin
                 if (bus_msg_o == BUS_RD && addr_o == i) nxt_line_state[i] = SHARED;
                 else if (bus_msg_o == BUS_RDX && addr_o == i) nxt_line_state[i] = MODIFIED;
@@ -84,17 +91,20 @@ always@(*) begin
         end
     end
 end
+endgenerate
 
 // Bus messages
 always @(*) begin
     if (!rst_i) begin
+	bus_msg_o = BUS_IDLE;
+    end else begin
         if (line_state[op_addr] == INVALID) begin
-            if (op == READ && pr_bus_req_i) bus_msg_o = BUS_RD;
-            else if (op == WRITE && pr_bus_req_i) bus_msg_o = BUS_RDX;
+            if (op == READ && pr_bus_req_q) bus_msg_o = BUS_RD;
+            else if (op == WRITE && pr_bus_req_q) bus_msg_o = BUS_RDX;
             else bus_msg_o = BUS_IDLE;
         end
         else if (line_state[op_addr] == SHARED) begin
-            if (op == WRITE && pr_bus_req_i) bus_msg_o = BUS_UPGR;
+            if (op == WRITE && pr_bus_req_q) bus_msg_o = BUS_UPGR;
             else bus_msg_o = BUS_IDLE;
         end
         else bus_msg_o = BUS_IDLE;
@@ -104,6 +114,8 @@ end
 // Flush
 always @(*) begin
     if (!rst_i) begin
+	flush_o = 0;
+    end else begin
         if (bus_msg_i == BUS_RD  && line_state[addr_i] == MODIFIED || 
             bus_msg_i == BUS_RDX && line_state[addr_i] == MODIFIED    ) begin
             flush_o = 1'b1;
@@ -116,30 +128,32 @@ end
 
 // Test operations
 always @(posedge clk_i) begin
-    if (!rst_i) begin
-        if (op != IDLE) begin
+    if (rst_i) begin
+        if (op == IDLE) begin
             if (test_rd_i) op <= READ;
             else if (test_wr_i) op <= WRITE;
-            else begin
-                if (pr_bus_req_i) begin
-                    op <= IDLE;
-                end
-                else if (((op == READ || op == WRITE) && line_state[op_addr] == MODIFIED) || (op == READ && line_state[op_addr] == SHARED)) begin
-                    op <= IDLE;
-                end
-            end
             op_addr <= test_addr_i;
+        end else begin
+            if (pr_bus_req_q) begin
+                op <= IDLE;
+            end
+            else if (line_state[op_addr] == MODIFIED || (op == READ && line_state[op_addr] == SHARED)) begin
+                op <= IDLE;
+            end
         end
     end
 end
 
 // Request bus
 always @(*) begin
-    if (!rst_i) begin
+    if (rst_i) begin
         if (!bus_requested && op != IDLE) begin
-            if (!((op == READ || op == WRITE) && line_state[op_addr] == MODIFIED) && !(op == READ && line_state[op_addr] == SHARED)) begin
+            if (line_state[op_addr] != MODIFIED && !(op == READ && line_state[op_addr] == SHARED)) begin
                 pr_bus_req_o = 1'b1;
             end
+	    else begin
+	        pr_bus_req_o = 1'b0;
+	    end
         end
         else begin
             pr_bus_req_o = 0;
@@ -148,14 +162,22 @@ always @(*) begin
 end
 
 always @(posedge clk_i) begin
-    if (rst_i) begin
+    if (!rst_i) begin
         bus_requested <= 1'b0;
-    else begin
+    end else begin
         if (pr_bus_req_o) bus_requested <= 1'b1;
-        else if (pr_bus_req_i) begin
+        else if (pr_bus_req_q) begin
             bus_requested <= 1'b0;
         end
     end
+end
+
+always @(posedge clk_i) begin
+	if (!rst_i) begin
+		pr_bus_req_q <= 0;
+	end else begin
+		pr_bus_req_q <= pr_bus_req_i;
+	end
 end
 
 // Assertions
@@ -167,15 +189,15 @@ always @(*) begin
         assert(!(line_state[op_addr] == MODIFIED && pr_bus_req_o));
         assert(!(line_state[op_addr] == SHARED && op == READ && pr_bus_req_o));
 
-        assert(pr_bus_req_i && !bus_requested);
+        assert(pr_bus_req_q && !bus_requested);
 
         assert(!((line_state[addr_i] == INVALID || line_state[addr_i] == SHARED) && flush_o));
 
         // A -> B === !A || B
-        assert(!(pr_bus_req_i && line_state[op_addr] == INVALID && op == READ)  || bus_msg_o == BUS_RD);
-        assert(!(pr_bus_req_i && line_state[op_addr] == INVALID && op == WRITE) || bus_msg_o == BUS_RDX);
-        assert(!(pr_bus_req_i && line_state[op_addr] == SHARED  && op == WRITE) || bus_msg_o == BUS_UPGR);
-        assert(!pr_bus_req_i && bus_msg_o == BUS_IDLE);
+        assert(!(pr_bus_req_q && line_state[op_addr] == INVALID && op == READ)  || bus_msg_o == BUS_RD);
+        assert(!(pr_bus_req_q && line_state[op_addr] == INVALID && op == WRITE) || bus_msg_o == BUS_RDX);
+        assert(!(pr_bus_req_q && line_state[op_addr] == SHARED  && op == WRITE) || bus_msg_o == BUS_UPGR);
+        assert(!pr_bus_req_q && bus_msg_o == BUS_IDLE);
     end
 end
 
