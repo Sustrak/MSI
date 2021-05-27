@@ -1,9 +1,10 @@
 module bus (
     input clk_i,
     input rst_i,
-
-    inout [CACHE_LINE_SIZE-1:0] mem_data_io,//Basicament per fer flushes, tecnicament tambe serveix per portar les dades desde memoria
-    inout [ADDR_SIZE-1:0] mem_addr_io
+    
+    input [3:0] do_rd_i,
+    input [3:0] do_wr_i,
+    input [1:0] test_addr_i [3:0]
 );
 
 parameter NUM_LINES=2;
@@ -246,15 +247,16 @@ cache #(
     .bus_msg_o (pr_bus_msg_i[0]),
     .bus_msg_i (pr_bus_msg_o),
     .flush_o (flush_i[0]),
-    .data_valid_i (flush_o),
-    .data_flush_fake_o(data_flush_fake_i[0]),
-    .data_in(data_fake_o),
+    //.data_valid_i (flush_o),
+    //.data_flush_fake_o(data_flush_fake_i[0]),
+    //.data_in(data_fake_o),
     .pr_bus_req_o(pr_bus_req_i[0]),
     .pr_bus_req_i(pr_bus_req_o[0]),
     .addr_o (pr_addr_req_i[0]),
-    do_rd_i (),
-    do_wr_i (),
-    .addr_i (pr_addr_req_o)
+    .addr_i (pr_addr_req_o),
+    .test_rd_i (do_rd_i[0),
+    .test_wr_i (do_wr_i[0]),
+    .test_addr_i (test_addr_i[0])
 );
 cache #(
     NUM_LINES=2
@@ -264,15 +266,16 @@ cache #(
     .bus_msg_o (pr_bus_msg_i[1]),
     .bus_msg_i (pr_bus_msg_o),
     .flush_o (flush_i[1]),
-    .data_valid_i (flush_o),
-    .data_flush_fake_o(data_flush_fake_i[1]),
-    .data_in(data_fake_o),
+    //.data_valid_i (flush_o),
+    //.data_flush_fake_o(data_flush_fake_i[1]),
+    //.data_in(data_fake_o),
     .pr_bus_req_o(pr_bus_req_i[1]),
     .pr_bus_req_i(pr_bus_req_o[1]),
     .addr_o (pr_addr_req_i[1]),
-    do_rd_i (),
-    do_wr_i (),
-    .addr_i (pr_addr_req_o)
+    .addr_i (pr_addr_req_o),
+    .test_rd_i (do_rd_i[1),
+    .test_wr_i (do_wr_i[1]),
+    .test_addr_i (test_addr_i[1])
 );
 cache #(
     NUM_LINES=2
@@ -281,16 +284,17 @@ cache #(
     .rst_i (rst_i),
     .bus_msg_o (pr_bus_msg_i[2]),
     .bus_msg_i (pr_bus_msg_o),
-    .flush_o (flush_i[2]),
-    .data_valid_i(flush_o),
-    .data_flush_fake_o(data_flush_fake_i[2]),
+    //.flush_o (flush_i[2]),
+    //.data_valid_i(flush_o),
+    //.data_flush_fake_o(data_flush_fake_i[2]),
     .data_in(data_fake_o),
     .pr_bus_req_o(pr_bus_req_i[2]),
     .pr_bus_req_i(pr_bus_req_o[2]),
     .addr_o (pr_addr_req_i[2]),
-    do_rd_i (),
-    do_wr_i (),
-    .addr_i (pr_addr_req_o)
+    .addr_i (pr_addr_req_o),
+    .test_rd_i (do_rd_i[2),
+    .test_wr_i (do_wr_i[2]),
+    .test_addr_i (test_addr_i[2])
 );
 cache #(
     NUM_LINES=2
@@ -299,16 +303,17 @@ cache #(
     .rst_i (rst_i),
     .bus_msg_o (pr_bus_msg_i[3]),
     .bus_msg_i (pr_bus_msg_o),
-    .flush_o (flush_i[3]),
-    .data_valid_i(flush_o),
-    .data_flush_fake_o(data_flush_fake_i[3]),
+    //.flush_o (flush_i[3]),
+    //.data_valid_i(flush_o),
+    //.data_flush_fake_o(data_flush_fake_i[3]),
     .data_in(data_fake_o),
     .pr_bus_req_o(pr_bus_req_i[3]),
     .pr_bus_req_i(pr_bus_req_o[3]),
     .addr_o (pr_addr_req_i[3]),
-    do_rd_i (),
-    do_wr_i (),
-    .addr_i (pr_addr_req_o)
+    .addr_i (pr_addr_req_o),
+    .test_rd_i (do_rd_i[3),
+    .test_wr_i (do_wr_i[3]),
+    .test_addr_i (test_addr_i[3])
 );
 
 endmodule

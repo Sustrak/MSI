@@ -17,7 +17,6 @@ module cache #(
     input  pr_bus_req_i,
     output pr_bus_req_o,
 
-    input  data_valid_i,
     output flush_o,
 
     // Stimulus
@@ -176,7 +175,7 @@ always @(*) begin
         assert(!(pr_bus_req_i && line_state[op_addr] == INVALID && op == READ)  || bus_msg_o == BUS_RD);
         assert(!(pr_bus_req_i && line_state[op_addr] == INVALID && op == WRITE) || bus_msg_o == BUS_RDX);
         assert(!(pr_bus_req_i && line_state[op_addr] == SHARED  && op == WRITE) || bus_msg_o == BUS_UPGR);
-        assert(pr_bus_req_i && bus_msg_o == BUS_IDLE);
+        assert(!pr_bus_req_i && bus_msg_o == BUS_IDLE);
     end
 end
 
