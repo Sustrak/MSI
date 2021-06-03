@@ -15,8 +15,6 @@ parameter NUM_LINES=2;
 parameter NUM_PROCS=4;
 parameter ADDR_SIZE=NUM_LINES;
 parameter CACHE_LINE_SIZE=128;
-//localparam DATA_FOR_READS=0xCAFE;
-//localparam DATA_FOR_WRITES= 0xDEAD;
 
 reg bus_state; //Estat del bus. 0->Esperant peticio, 1->Bus cedit a 1 proc
 reg [1:0] cnt;
@@ -50,27 +48,6 @@ end
 assign rst_i = rst_cnt == 3 ? 1 : 0;
 
 
-
-
-//assign data_fake_o = flush_o ? data_flush_fake : 
-/*
-always @(*) begin
-    if(bus_state) begin
-        if(flush_o) begin
-            data_fake_o <= data_flush_fake;
-        end
-        else begin
-            case (pr_bus_msg_o)
-                2'b00 : data_fake_o <= DATA_FOR_READS;
-                2'b01 : data_fake_o <= DATA_FOR_WRITES; 
-                default: data_fake_o <= 0;
-            endcase
-        end
-    end    
-    else 
-        data_fake_o <= 0;
-end
-*/
 //Seleccio del missatge que es transmet pel bus
 always @(*) begin
     if(bus_state) begin
@@ -108,28 +85,24 @@ always @(*) begin
         case (proc_bus_owner)
             2'b00 : begin
                 flush_o = flush_i[0];
-                //data_flush_fake_o = data_flush_fake_i[0];
                 if(rst_i) assert(flush_i[1] == 0); //Nomes 1 processador pot fer flush
                 if(rst_i) assert(flush_i[2] == 0);
                 if(rst_i) assert(flush_i[3] == 0);
             end
             2'b01 : begin
                 flush_o = flush_i[1];
-                //data_flush_fake_o = data_flush_fake_i[1];
                 if(rst_i) assert(flush_i[0] == 0); //Nomes 1 processador pot fer flush
                 if(rst_i) assert(flush_i[2] == 0);
                 if(rst_i) assert(flush_i[3] == 0);
             end
             2'b10 : begin
                 flush_o = flush_i[2];
-                //data_flush_fake_o = data_flush_fake_i[2];
                 if(rst_i) assert(flush_i[0] == 0); //Nomes 1 processador pot fer flush
                 if(rst_i) assert(flush_i[1] == 0);
                 if(rst_i) assert(flush_i[3] == 0);
             end
             2'b11 : begin
                 flush_o = flush_i[3];
-                //data_flush_fake_o = data_flush_fake_i[3];
                 if(rst_i) assert(flush_i[0] == 0); //Nomes 1 processador pot fer flush
                 if(rst_i) assert(flush_i[1] == 0);
                 if(rst_i) assert(flush_i[2] == 0);
@@ -139,7 +112,6 @@ always @(*) begin
     end
     else begin
         flush_o = 0;
-        //data_flush_fake_o <= 0;
     end
 end
 
@@ -246,7 +218,7 @@ always @ (*) begin
         nxt_bus_state = 0;
     else
         case (bus_state)
-            0: nxt_bus_state = |pr_bus_req_i; //Aixo val en Verilog? xD
+            0: nxt_bus_state = |pr_bus_req_i;
             1: nxt_bus_state = 0;
             default: ;
         endcase
@@ -271,9 +243,6 @@ cache #(
     .bus_msg_o (pr_bus_msg_i[0]),
     .bus_msg_i (pr_bus_msg_o),
     .flush_o (flush_i[0]),
-    //.data_valid_i (flush_o),
-    //.data_flush_fake_o(data_flush_fake_i[0]),
-    //.data_in(data_fake_o),
     .pr_bus_req_o(pr_bus_req_i[0]),
     .pr_bus_req_i(pr_bus_req_o[0]),
     .addr_o (pr_addr_req_i[0]),
@@ -290,9 +259,6 @@ cache #(
     .bus_msg_o (pr_bus_msg_i[1]),
     .bus_msg_i (pr_bus_msg_o),
     .flush_o (flush_i[1]),
-    //.data_valid_i (flush_o),
-    //.data_flush_fake_o(data_flush_fake_i[1]),
-    //.data_in(data_fake_o),
     .pr_bus_req_o(pr_bus_req_i[1]),
     .pr_bus_req_i(pr_bus_req_o[1]),
     .addr_o (pr_addr_req_i[1]),
@@ -308,10 +274,6 @@ cache #(
     .rst_i (rst_i),
     .bus_msg_o (pr_bus_msg_i[2]),
     .bus_msg_i (pr_bus_msg_o),
-    //.flush_o (flush_i[2]),
-    //.data_valid_i(flush_o),
-    //.data_flush_fake_o(data_flush_fake_i[2]),
-    //.data_in(data_fake_o),
     .pr_bus_req_o(pr_bus_req_i[2]),
     .pr_bus_req_i(pr_bus_req_o[2]),
     .addr_o (pr_addr_req_i[2]),
@@ -327,10 +289,6 @@ cache #(
     .rst_i (rst_i),
     .bus_msg_o (pr_bus_msg_i[3]),
     .bus_msg_i (pr_bus_msg_o),
-    //.flush_o (flush_i[3]),
-    //.data_valid_i(flush_o),
-    //.data_flush_fake_o(data_flush_fake_i[3]),
-    //.data_in(data_fake_o),
     .pr_bus_req_o(pr_bus_req_i[3]),
     .pr_bus_req_i(pr_bus_req_o[3]),
     .addr_o (pr_addr_req_i[3]),
